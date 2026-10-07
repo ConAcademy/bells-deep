@@ -1,0 +1,23 @@
+version: '3'
+vars:
+  GO_ENV: '{{if eq OS "linux"}}CGO_ENABLED=0{{end}}'
+  GO_TAGS: '{{if eq OS "linux"}}-tags=nofakecgo{{end}}'
+tasks:
+  build:
+    desc: Build bells-deep
+    cmds:
+      - mkdir -p bin
+      - '{{.GO_ENV}} go build {{.GO_TAGS}} -o ./bin/bells-deep ./cmd/bells-deep'
+  run:
+    desc: Build and run (pass flags after --)
+    deps: [build]
+    cmds:
+      - './bin/bells-deep {{.CLI_ARGS}}'
+  test:
+    desc: Run all tests (GPU tests skip without an adapter)
+    cmds:
+      - '{{.GO_ENV}} go test {{.GO_TAGS}} ./...'
+  race:
+    desc: Check CPU packages for races
+    cmds:
+      - go test -race ./internal/mixture ./internal/preset ./internal/shader ./internal/session ./internal/preview ./internal/web ./cmd/bells-deep

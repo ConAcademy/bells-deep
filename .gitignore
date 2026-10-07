@@ -1,0 +1,4 @@
+/bin/
+/bells-gallery/
+*.log
+.DS_Store
