@@ -2,3 +2,7 @@
 /bells-gallery/
 *.log
 .DS_Store
+/.task/
+
+# Generated browser site (task build-site)
+/site/dist/

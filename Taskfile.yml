@@ -1,23 +1,135 @@
+# bells-deep - Copyright (c) 2026 Neomantra Corp.
+
 version: '3'
+
 vars:
   GO_ENV: '{{if eq OS "linux"}}CGO_ENABLED=0{{end}}'
   GO_TAGS: '{{if eq OS "linux"}}-tags=nofakecgo{{end}}'
+  CPU_PKGS: ./internal/mixture ./internal/preset ./internal/shader ./internal/session ./internal/preview ./internal/web ./cmd/bells-deep
+
 tasks:
+  default:
+    desc: Build bells-deep
+    cmds:
+      - task: build
+
+  list:
+    desc: List available tasks
+    cmds:
+      - task --list-all
+
+  go-tidy:
+    desc: Tidy the module
+    cmds:
+      - go mod tidy
+
+  go-tidy-check:
+    desc: Check module files without changing them
+    cmds:
+      - go mod tidy -diff
+
+  go-verify:
+    desc: Verify dependency checksums
+    cmds:
+      - go mod verify
+
+  fmt:
+    desc: Format Go source
+    cmds:
+      - gofmt -w cmd internal web
+
+  fmt-check:
+    desc: Check Go formatting
+    cmds:
+      - |
+        unformatted_files=$(gofmt -l cmd internal web)
+        if [ -n "$unformatted_files" ]; then
+          printf '%s\n' "$unformatted_files"
+          exit 1
+        fi
+
   build:
     desc: Build bells-deep
     cmds:
       - mkdir -p bin
-      - '{{.GO_ENV}} go build {{.GO_TAGS}} -o ./bin/bells-deep ./cmd/bells-deep'
+      - '{{.GO_ENV}} go build -mod=readonly {{.GO_TAGS}} -o ./bin/bells-deep ./cmd/bells-deep'
+
   run:
     desc: Build and run (pass flags after --)
     deps: [build]
     cmds:
       - './bin/bells-deep {{.CLI_ARGS}}'
+
   test:
     desc: Run all tests (GPU tests skip without an adapter)
     cmds:
-      - '{{.GO_ENV}} go test {{.GO_TAGS}} ./...'
+      - '{{.GO_ENV}} go test -mod=readonly {{.GO_TAGS}} ./...'
+
   race:
     desc: Check CPU packages for races
     cmds:
-      - go test -race ./internal/mixture ./internal/preset ./internal/shader ./internal/session ./internal/preview ./internal/web ./cmd/bells-deep
+      - go test -mod=readonly -race {{.CPU_PKGS}}
+
+  vet:
+    desc: Run go vet for the native and browser targets
+    cmds:
+      - '{{.GO_ENV}} go vet -mod=readonly {{.GO_TAGS}} ./...'
+      - GOOS=js GOARCH=wasm CGO_ENABLED=0 go vet -mod=readonly ./...
+
+  ci:
+    desc: Run formatting, dependency, test, vet, and build checks
+    cmds:
+      - task: fmt-check
+      - task: go-tidy-check
+      - task: go-verify
+      - task: test
+      - task: race
+      - task: vet
+      - task: build
+      - task: build-wasm
+
+  build-wasm:
+    desc: Compile the browser version to site/dist/app.wasm
+    env:
+      GOOS: js
+      GOARCH: wasm
+      CGO_ENABLED: '0'
+    cmds:
+      - mkdir -p site/dist
+      - go build -mod=readonly -trimpath '-ldflags=-s -w' -o site/dist/app.wasm ./cmd/bells-deep
+    sources:
+      - cmd/**/*.go
+      - internal/**/*.go
+      - internal/shader/*.wgsl
+      - go.mod
+      - go.sum
+    generates:
+      - site/dist/app.wasm
+
+  web-assets:
+    desc: Assemble site/dist from site/ sources and the pinned go-booba assets
+    cmds:
+      - mkdir -p site/dist
+      - cp site/index.html site/runtime.js site/dist/
+      - go tool booba-assets site/dist/_assets
+      - rm -f site/dist/_assets/index.html
+      - touch site/dist/.nojekyll
+
+  build-site:
+    desc: Build the complete browser site into site/dist
+    cmds:
+      - task: build-wasm
+      - task: web-assets
+
+  serve-site:
+    desc: Serve the built site at http://localhost:8765
+    preconditions:
+      - sh: test -f site/dist/app.wasm && test -f site/dist/index.html
+        msg: Run task build-site first.
+    cmds:
+      - python3 -m http.server 8765 --bind 127.0.0.1 -d site/dist
+
+  clean:
+    desc: Remove compiled outputs and the generated site
+    cmds:
+      - rm -rf bin .task site/dist

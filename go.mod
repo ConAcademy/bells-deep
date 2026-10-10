@@ -6,6 +6,7 @@ require (
 	charm.land/bubbles/v2 v2.2.1
 	charm.land/bubbletea/v2 v2.0.10
 	charm.land/lipgloss/v2 v2.0.6
+	github.com/NimbleMarkets/go-booba v0.7.0
 	github.com/NimbleMarkets/ntcharts/v2 v2.4.0
 	github.com/charmbracelet/ultraviolet v0.0.0-20260928045949-bbf040aedf25
 	github.com/charmbracelet/x/ansi v0.11.8
@@ -38,3 +39,9 @@ require (
 	golang.org/x/sync v0.23.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 )
+
+tool github.com/NimbleMarkets/go-booba/cmd/booba-assets
+
+replace charm.land/bubbletea/v2 => github.com/neomantra/bubbletea/v2 v2.0.0-20260928192001-1b36865b418a
+
+replace github.com/atotto/clipboard => github.com/neomantra/clipboard v0.0.0-20260506203444-114abb315f8d

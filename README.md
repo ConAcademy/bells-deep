@@ -1,5 +1,8 @@
 # bells-deep
 
+[![Build Go](https://github.com/ConAcademy/bells-deep/actions/workflows/go.yml/badge.svg)](https://github.com/ConAcademy/bells-deep/actions/workflows/go.yml)
+[![GitHub Pages](https://github.com/ConAcademy/bells-deep/actions/workflows/pages.yml/badge.svg)](https://conacademy.github.io/bells-deep/)
+
 A keyboard-first explorer for 3D Gaussian bells. Adjust means, spreads,
 correlation, and weights across up to eight components. See the height field,
 covariance ellipses, analytic marginals, seeded samples, and peak contours.
@@ -15,7 +18,22 @@ task run -- --web-only --preset correlated
 task run -- --no-gpu
 task test
 task race
+task ci           # formatting, module, test, vet, and native/WASM build checks
+task build-site   # browser build into site/dist (go-booba)
+task serve-site   # serve site/dist at http://localhost:8765
 ```
+
+[**Try it in your browser**](https://conacademy.github.io/bells-deep/): the TUI
+compiled to WebAssembly and embedded with
+[`go-booba`](https://github.com/NimbleMarkets/go-booba) v0.7.0, rendering
+through the browser's WebGPU and Kitty shared memory. `go.mod` replaces Bubble
+Tea and the clipboard package with forks that add js/wasm stubs; native builds
+are unaffected. `task build-site` compiles `site/dist/app.wasm` and copies the
+`site/` sources and the bundled booba terminal assets (`go tool booba-assets`)
+into `site/dist/`. CI runs `task ci` on Linux and macOS for every push and pull
+request. The Pages workflow builds the site on pull requests and pushes to
+`main`; only `main` deploys. In repository **Settings → Pages**, choose
+**GitHub Actions** as the build source once.
 
 Without Task: `go run ./cmd/bells-deep`. Linux builds use
 `CGO_ENABLED=0 go build -tags=nofakecgo -o bin/bells-deep ./cmd/bells-deep`.

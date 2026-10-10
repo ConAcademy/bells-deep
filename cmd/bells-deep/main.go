@@ -9,9 +9,11 @@ import (
 	"github.com/NimbleMarkets/bells-deep/internal/preset"
 	"github.com/NimbleMarkets/bells-deep/internal/session"
 	webui "github.com/NimbleMarkets/bells-deep/internal/web"
+	booba "github.com/NimbleMarkets/go-booba"
 	"github.com/spf13/pflag"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 )
 
@@ -20,6 +22,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "bells-deep:", err)
 		os.Exit(1)
 	}
+	holdRuntime()
 }
 func run() error {
 	f := pflag.NewFlagSet("bells-deep", pflag.ContinueOnError)
@@ -106,6 +109,10 @@ func run() error {
 	defer m.clearPictures() // Release pending/current shared-memory objects on every exit.
 	m.fullscreen = *full
 	m.server = server
-	_, err = tea.NewProgram(m).Run()
-	return err
+	// booba.Run dispatches to native Bubble Tea or the WASM bridge by build target.
+	if runtime.GOOS == "js" {
+		// A browser has no POSIX signals, so the signal handler is useless there.
+		return booba.Run(m, tea.WithoutSignalHandler())
+	}
+	return booba.Run(m)
 }

@@ -9,7 +9,6 @@ import (
 	"github.com/NimbleMarkets/bells-deep/internal/shader"
 	"github.com/gogpu/gputypes"
 	"github.com/gogpu/wgpu"
-	_ "github.com/gogpu/wgpu/hal/allbackends"
 	"image"
 	"math"
 	"runtime"
@@ -51,6 +50,10 @@ type device struct {
 	sampleLen             int
 }
 
+// inBrowser is true for the WebAssembly build, where the browser's WebGPU
+// adapter reports no HAL backend yet is a real hardware device.
+var inBrowser = runtime.GOOS == "js"
+
 func New() *Executor {
 	e := &Executor{jobs: make(chan job)}
 	ready := make(chan struct{})
@@ -66,7 +69,7 @@ func New() *Executor {
 			if err == nil && a != nil {
 				defer a.Release()
 				info := a.Info()
-				if info.DeviceType == gputypes.DeviceTypeCPU || info.Backend == gputypes.BackendEmpty {
+				if info.DeviceType == gputypes.DeviceTypeCPU || (!inBrowser && info.Backend == gputypes.BackendEmpty) {
 					err = errors.New("no hardware adapter")
 				} else {
 					d.dev, err = a.RequestDevice(nil)
